@@ -160,13 +160,13 @@ if (type(ip)==str):
 # Iniciar o subscritor
 threading.Thread(target=subscriber_video, args=(ip_s)).start()
 threading.Thread(target=subscriber_mensage, args=(ip_s)).start()
-threading.Thread(target=subscriber_audio, args=(ip_s)).start()
+#threading.Thread(target=subscriber_audio, args=(ip_s)).start()
 
 # Iniciar o publicador
 
 threading.Thread(target=publisher_video, args=(ip,)).start()
 threading.Thread(target=publisher_mensage, args=(ip,nick)).start()
-threading.Thread(target=publisher_audio, args=(ip,)).start()
+#threading.Thread(target=publisher_audio, args=(ip,)).start()
 
 
 
