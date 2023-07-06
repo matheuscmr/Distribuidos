@@ -33,31 +33,36 @@ def subscriber_mensagem(ip_t):
 # A função subscriber_video, tem como objetivo se increver na porta para comunicação de video
 # recebe como parametro ip_t, que é um conjunto de ips ao qual deseja se inscrever
 def subscriber_video(ip_t):
-     # as 3 proximas linhas serao ações necessarias para realizar o connect
     context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.setsockopt_string(zmq.SUBSCRIBE, '')
-    # o if a seguir fora feito para corrigir um bug, quando o codigo 
-    # passava sem querer uma string ao inves de uma lista
-    if (type(ip_t)==str):
-        new_ip=[]
-        new_ip.append(ip_t)
-        ip_t = new_ip
-    # aqui ele conectara em todos os ips passados
+    sockets = []
+
     for ip in ip_t:
         porta = "7001"
         ip_complete = f"tcp://{ip}:{porta}"
+        socket = context.socket(zmq.SUB)
+        socket.setsockopt_string(zmq.SUBSCRIBE, '')
         socket.connect(ip_complete)
-    
+        sockets.append(socket)
+
+    windows = {}  # Dicionário para mapear endereços IP para janelas do OpenCV
+
     while True:
-        # comandos necessarios para receber dados e reproduzir video usando o opencv
-        frame_bytes = socket.recv()
-        frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
-        frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-        cv2.imshow('Recebendo video', frame)
+        for i, socket in enumerate(sockets):
+            frame_bytes = socket.recv()
+            frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
+            frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
+
+            # Verificar se a janela correspondente ao endereço IP já existe
+            if ip_t[i] not in windows:
+                windows[ip_t[i]] = cv2.namedWindow(f"Recebendo video - {ip_t[i]}", cv2.WINDOW_NORMAL)
+
+            cv2.imshow(f"Recebendo video - {ip_t[i]}", frame)
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+
     cv2.destroyAllWindows()
+
 
 # A função subscriber_audio, tem como objetivo se increver na porta para comunicação de audio
 # recebe como parametro ip_t, que é um conjunto de ips ao qual deseja se inscrever
@@ -161,7 +166,7 @@ def publisher_audio(ip):
     )
 
     while True:
-        #realiza o envio de audio
+        #realiza o envio de
         audio_data = stream.read(CHUNK)
         socket.send(audio_data)
 
