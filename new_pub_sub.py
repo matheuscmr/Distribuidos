@@ -59,7 +59,8 @@ def subscriber_audio(ip_t):
         ip_complete = f"tcp://{ip}:{porta}"
         socket.connect(ip_complete)
         socket.subscribe("")
-        
+
+    audio = pyaudio.PyAudio()
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
@@ -67,7 +68,7 @@ def subscriber_audio(ip_t):
     stream = audio.open(format=FORMAT,channels=CHANNELS,rate=RATE,output=True)
 
     while True:
-            audio_data = subscriber.recv()
+            audio_data = socket.recv()
             stream.write(audio_data)
 
 
@@ -109,7 +110,7 @@ def publisher_audio(ip):
     porta = "7002"
     ip_complete = f"tcp://{ip}:{porta}"
     socket.bind(ip_complete)
-
+    audio = pyaudio.PyAudio()
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
@@ -125,7 +126,7 @@ def publisher_audio(ip):
 
     while True:
         audio_data = stream.read(CHUNK)
-        publisher.send(audio_data)
+        socket.send(audio_data)
 
 ip_t = input("Digite o seu ip: ")
 nick = input("Digite o seu nick: ")
@@ -134,7 +135,7 @@ ip_s = input("Digite os IPs que deseja conectar: ").split()
 # Iniciar os subscritores
 threading.Thread(target=subscriber_mensagem, args=(ip_s)).start()
 threading.Thread(target=subscriber_video, args=(ip_s,)).start()
-#threading.Thread(target=subscriber_audio, args=(ip_s,)).start()
+threading.Thread(target=subscriber_audio, args=(ip_s,)).start()
 
 # Aguardar um tempo para garantir que os subscritores estão ativos
 time.sleep(1)
@@ -142,7 +143,7 @@ time.sleep(1)
 # Iniciar os publicadores
 threading.Thread(target=publisher_mensagem, args=(ip_t,nick)).start()
 threading.Thread(target=publisher_video, args=(ip_t,)).start()
-#threading.Thread(target=publisher_audio, args=(ip_t,)).start()
+threading.Thread(target=publisher_audio, args=(ip_t,)).start()
 
 # Manter o programa em execução até ser interrompido manualmente
 while True:
