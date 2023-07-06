@@ -60,19 +60,15 @@ def subscriber_audio(ip_t):
         socket.connect(ip_complete)
         socket.subscribe("")
         
-
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
     RATE = 44100
-    audio = pyaudio.PyAudio()
-    stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    stream = audio.open(format=FORMAT,channels=CHANNELS,rate=RATE,output=True)
 
     while True:
-        data = socket.recv()
-        
-        # Reproduza os dados de áudio
-        stream.write(data)
+            audio_data = subscriber.recv()
+            stream.write(audio_data)
 
 
 def publisher_mensagem(ip,nick):
@@ -118,12 +114,18 @@ def publisher_audio(ip):
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
     RATE = 44100
-    audio = pyaudio.PyAudio()
-    stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, frames_per_buffer=CHUNK)
+    CHUNK = 1024
+    stream = audio.open(
+        format=FORMAT,
+        channels=CHANNELS,
+        rate=RATE,
+        input=True,
+        frames_per_buffer=CHUNK
+    )
 
     while True:
-        data = stream.read(CHUNK)
-        socket.send(data)
+        audio_data = stream.read(CHUNK)
+        publisher.send(audio_data)
 
 ip_t = input("Digite o seu ip: ")
 nick = input("Digite o seu nick: ")
