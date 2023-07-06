@@ -1,42 +1,56 @@
 import zmq
 import time
-import threading
-import cv2
+import threading #biblioteca para criar threads e trabalhar em "paralelo"
+import cv2 #biblioteca para transmitir video
 import numpy as np
-import pyaudio
+import pyaudio #biblioteca para transmitir audio
 
+
+# A função subscriber_mensage, tem como objetivo se increver na porta para comunicação de texto 
+# recebe como parametro ip_t, que é um conjunto de ips ao qual deseja se inscrever
 def subscriber_mensagem(ip_t):
+    # as 3 proximas linhas serao ações necessarias para realizar o conect
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.setsockopt_string(zmq.SUBSCRIBE, '')
+    # o if a seguir fora feito para corrigir um bug, quando o codigo 
+    # passava sem querer uma string ao inves de uma lista
     if (type(ip_t)==str):
         new_ip=[]
         new_ip.append(ip_t)
         ip_t = new_ip
+    #aqui ele conectara em todos os ips passados
     for ip in ip_t:
         porta = "7000"
         ip_complete = f"tcp://{ip}:{porta}"
         socket.connect(ip_complete)
+    #imprime as mensagens recebidas
     while True:
         message = socket.recv_string()
         print(message)
         
 
-
+# A função subscriber_video, tem como objetivo se increver na porta para comunicação de video
+# recebe como parametro ip_t, que é um conjunto de ips ao qual deseja se inscrever
 def subscriber_video(ip_t):
+     # as 3 proximas linhas serao ações necessarias para realizar o connect
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.setsockopt_string(zmq.SUBSCRIBE, '')
-    
-    for ip in ip_t:
-        porta = "7001"
-        ip_complete = f"tcp://{ip}:{porta}"
-        socket.connect(ip_complete)
+    # o if a seguir fora feito para corrigir um bug, quando o codigo 
+    # passava sem querer uma string ao inves de uma lista
     if (type(ip_t)==str):
         new_ip=[]
         new_ip.append(ip_t)
         ip_t = new_ip
+    # aqui ele conectara em todos os ips passados
+    for ip in ip_t:
+        porta = "7001"
+        ip_complete = f"tcp://{ip}:{porta}"
+        socket.connect(ip_complete)
+    
     while True:
+        # comandos necessarios para receber dados e reproduzir video usando o opencv
         frame_bytes = socket.recv()
         frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
         frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
@@ -45,21 +59,25 @@ def subscriber_video(ip_t):
             break
     cv2.destroyAllWindows()
 
-    
+# A função subscriber_audio, tem como objetivo se increver na porta para comunicação de audio
+# recebe como parametro ip_t, que é um conjunto de ips ao qual deseja se inscrever
 def subscriber_audio(ip_t):
+     # as 2 proximas linhas serao ações necessarias para realizar o connect
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
+    # o if a seguir fora feito para corrigir um bug, quando o codigo 
+    # passava sem querer uma string ao inves de uma lista
     if (type(ip_t)==str):
         new_ip=[]
         new_ip.append(ip_t)
         ip_t = new_ip
-
+    # aqui ele conectara em todos os ips passados
     for ip in ip_t:
         porta = "7002"
         ip_complete = f"tcp://{ip}:{porta}"
         socket.connect(ip_complete)
         socket.subscribe("")
-
+    # configurando variaveis para receber o audio
     audio = pyaudio.PyAudio()
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
@@ -68,18 +86,25 @@ def subscriber_audio(ip_t):
     stream = audio.open(format=FORMAT,channels=CHANNELS,rate=RATE,output=True)
 
     while True:
+            #recebimento e reprodução de audio
             audio_data = socket.recv()
             stream.write(audio_data)
 
 
+# A função publisher_mensagem, tem como objetivo ser um publicador de conteudo em texto 
+# recebe como um dos parametros ip, que é a a porta ao qual você dara bind (sua porta IPV4)
+# recebe como um dos parametros o nick, que consiste no nick que ira aparecer do lado a sua mensagem enviada
 def publisher_mensagem(ip,nick):
+    # proximas 2 linhas coleta informações para realizar o bind
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
+    #porta que escolhemos para realizar o bind de mensagem
     porta = "7000"
     ip_complete = f"tcp://{ip}:{porta}"
     socket.bind(ip_complete)
     
     while True:
+        # aqui ele anexa o nick a mensagem e envia para os subscribers
         message = input("Digite uma mensagem: ")
         message = f'{nick}: {message}'
         socket.send_string(message)
@@ -87,29 +112,40 @@ def publisher_mensagem(ip,nick):
 
     
 
+# A função publisher_video, tem como objetivo ser um publicador de conteudo em video
+# recebe como um dos parametros ip, que é a a porta ao qual você dara bind (sua porta IPV4)
 def publisher_video(ip):
+    # proximas 2 linhas coleta informações para realizar o bind
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
+    #porta que escolhemos para realizar o bind de video
     porta = "7001"
     ip_complete = f"tcp://{ip}:{porta}"
     socket.bind(ip_complete)
 
 
-
+    # inicia a captura de video
     video_capture = cv2.VideoCapture(0)
 
     while True:
+        # realiza continuamente o envio de video
         ret, frame = video_capture.read()
         frame_bytes = cv2.imencode('.jpg', frame)[1].tobytes()
         socket.send(frame_bytes)
 
 
+
+# A função publisher_audio, tem como objetivo ser um publicador de conteudo em audio
+# recebe como um dos parametros ip, que é a a porta ao qual você dara bind (sua porta IPV4)
 def publisher_audio(ip):
+    # proximas 2 linhas coleta informações para realizar o bind
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
+    #porta que escolhemos para realizar o bind de audio
     porta = "7002"
     ip_complete = f"tcp://{ip}:{porta}"
     socket.bind(ip_complete)
+    #da valores as variaveis necessarias para enviar o audio
     audio = pyaudio.PyAudio()
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
@@ -125,9 +161,12 @@ def publisher_audio(ip):
     )
 
     while True:
+        #realiza o envio de audio
         audio_data = stream.read(CHUNK)
         socket.send(audio_data)
 
+
+#pega os dados a serem passados como parametro para as funções
 ip_t = input("Digite o seu ip: ")
 nick = input("Digite o seu nick: ")
 ip_s = input("Digite os IPs que deseja conectar: ").split()
